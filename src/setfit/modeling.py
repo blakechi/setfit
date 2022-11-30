@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
 
-MODEL_HEAD_NAME = "model_head.pkl"
+MODEL_HEAD_NAME = "model_head"
 
 
 class SetFitBaseModel:
@@ -177,6 +178,16 @@ class SetFitHead(models.Dense):
             "bias": self.bias,
             "device": self.device.type,  # store the string of the device, instead of `torch.device`
         }
+
+    @staticmethod
+    def load(input_path: Union[str, Path]) -> "SetFitHead":
+        with open(os.path.join(input_path, "config.json")) as f:
+            config = json.load(f)
+
+        model = SetFitHead(**config)
+        model.load_state_dict(torch.load(os.path.join(input_path, "pytorch_model.bin")))
+
+        return model
 
     @staticmethod
     def _init_weight(module):
