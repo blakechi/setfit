@@ -318,7 +318,7 @@ class SetFitModel(PyTorchModelHubMixin):
 
     def _save_pretrained(self, save_directory: str) -> None:
         self.model_body.save(path=save_directory)
-        joblib.dump(self.model_head, f"{save_directory}/{MODEL_HEAD_NAME}")
+        self.model_head.save(f"{save_directory}/{MODEL_HEAD_NAME}")
 
     @classmethod
     def _from_pretrained(
@@ -371,7 +371,7 @@ class SetFitModel(PyTorchModelHubMixin):
                 model_head_file = None
 
         if model_head_file is not None:
-            model_head = joblib.load(model_head_file)
+            model_head = SetFitHead.load(model_head_file)
         else:
             if use_differentiable_head:
                 body_embedding_dim = model_body.get_sentence_embedding_dimension()
