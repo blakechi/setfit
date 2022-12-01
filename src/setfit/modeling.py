@@ -90,7 +90,11 @@ class SetFitHead(models.Dense):
         self.out_features = out_features
         self.temperature = temperature
         self.bias = bias
-        self._device = device or "cuda" if torch.cuda.is_available() else "cpu"
+        self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device is not None:
+            device = device.type if type(device) is torch.device else device  # Convert to `str` if it's `torch.device`
+            if not device.startswith(self._device):  # The given `device` isn't available
+                logger.warning(f"Can't move `SetFitHead` to the given device: {device!r}. Move `SetFitHead` to `cpu` instead.")
 
         self.to(self._device)
         self.apply(self._init_weight)
@@ -329,7 +333,10 @@ class SetFitModel(PyTorchModelHubMixin):
 
     def _save_pretrained(self, save_directory: str) -> None:
         self.model_body.save(path=save_directory)
-        self.model_head.save(f"{save_directory}/{MODEL_HEAD_NAME}")
+
+        head_save_directory = os.path.join(save_directory, MODEL_HEAD_NAME)
+        os.makedirs(head_save_directory, exist_ok=True)
+        self.model_head.save(head_save_directory)
 
     @classmethod
     def _from_pretrained(
