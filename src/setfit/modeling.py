@@ -370,9 +370,10 @@ class SetFitModel(PyTorchModelHubMixin):
                 model_head_file = None
         else:
             try:
-                model_head_file = hf_hub_download(
+                # download model configuration
+                _ = hf_hub_download(
                     repo_id=model_id,
-                    filename=MODEL_HEAD_NAME,
+                    filename=os.path.join(MODEL_HEAD_NAME, "config.json"),
                     revision=revision,
                     cache_dir=cache_dir,
                     force_download=force_download,
@@ -381,6 +382,20 @@ class SetFitModel(PyTorchModelHubMixin):
                     use_auth_token=use_auth_token,
                     local_files_only=local_files_only,
                 )
+                # download model weights
+                model_head_file = hf_hub_download(
+                    repo_id=model_id,
+                    filename=os.path.join(MODEL_HEAD_NAME, "pytorch_model.bin"),
+                    revision=revision,
+                    cache_dir=cache_dir,
+                    force_download=force_download,
+                    proxies=proxies,
+                    resume_download=resume_download,
+                    use_auth_token=use_auth_token,
+                    local_files_only=local_files_only,
+                )
+                # get the folder name of the head instead of the path of the head's weights
+                model_head_file = os.path.dirname(model_head_file)
             except requests.exceptions.RequestException:
                 logger.info(
                     f"{MODEL_HEAD_NAME} not found on HuggingFace Hub, initialising classification head with random weights."
