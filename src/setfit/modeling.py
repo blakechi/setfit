@@ -90,11 +90,7 @@ class SetFitHead(models.Dense):
         self.out_features = out_features
         self.temperature = temperature
         self.bias = bias
-        self._device = "cuda" if torch.cuda.is_available() else "cpu"
-        if device is not None:
-            device = device.type if type(device) is torch.device else device  # Convert to `str` if it's `torch.device`
-            if not device.startswith(self._device):  # The given `device` isn't available
-                logger.warning(f"Can't move `SetFitHead` to the given device: {device!r}. Move `SetFitHead` to `cpu` instead.")
+        self._device = self._change_device_if_unavailable(device)
 
         self.to(self._device)
         self.apply(self._init_weight)
@@ -174,6 +170,25 @@ class SetFitHead(models.Dense):
         """
         return next(self.parameters()).device
 
+    def _change_device_if_unavailable(self, desired_device: Optional[Union[torch.device, str]]) -> Union[torch.device, str]:
+        """
+        Check whether the user given device is available in the current environment.
+        If `None`, will use `cuda` or `cpu` depending on which one is available.
+        If not available, will use `cpu`.
+        If available, will return the original input.
+        """
+        available_device = "cuda" if torch.cuda.is_available() else "cpu"
+        if desired_device is not None:
+            desired_device_ = desired_device.type if type(desired_device) is torch.device else desired_device
+            if not desired_device_.startswith(available_device):  # The given `desired_device` isn't available
+                logger.warning(f"Can't move `SetFitHead` to the given device: {desired_device_!r}. Move `SetFitHead` to `cpu` instead.")
+
+                return "cpu"
+            
+            return desired_device
+
+        return available_device
+
     def get_config_dict(self) -> Dict[str, Union[int, float, bool]]:
         return {
             "in_features": self.in_features,
@@ -189,7 +204,7 @@ class SetFitHead(models.Dense):
             config = json.load(f)
 
         model = SetFitHead(**config)
-        model.load_state_dict(torch.load(os.path.join(input_path, "pytorch_model.bin")))
+        model.load_state_dict(torch.load(os.path.join(input_path, "pytorch_model.bin"), map_location=model.device))
 
         return model
 
